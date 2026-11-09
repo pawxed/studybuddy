@@ -1,3 +1,4 @@
+# StudyBuddy Requirements
 fastapi
 uvicorn
 httpx
