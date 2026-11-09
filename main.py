@@ -1,9 +1,20 @@
-import os
-import uvicorn
-from app import app
+#!/usr/bin/env python3
+import sys
+import subprocess
 
-# Railway often requires simple requirements.txt to install dependencies correctly.
-# The previous build failed because it wasn't installing requirements.
+# Manual check for required packages
+required = ["fastapi", "uvicorn", "httpx", "openai", "pypdf", "python-multipart", "gunicorn"]
+for pkg in required:
+    try:
+        __import__(pkg)
+        print(f"{pkg} installed")
+    except ImportError:
+        print(f"{pkg} NOT installed - trying to install")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
+
+from app import app
+import uvicorn
+import os
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
