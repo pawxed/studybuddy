@@ -2,6 +2,9 @@ import os
 import uvicorn
 from app import app
 
+# Railway often requires simple requirements.txt to install dependencies correctly.
+# The previous build failed because it wasn't installing requirements.
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     print(f"Starting StudyBuddy on http://0.0.0.0:{port}")
