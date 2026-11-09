@@ -4,3 +4,4 @@ httpx
 openai
 pypdf
 python-multipart
+gunicorn
