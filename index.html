@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyBuddy — AI Study Companion</title>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22222e;
+    --border: #2e2e3e;
+    --accent: #6c5ce7;
+    --accent-light: #a29bfe;
+    --green: #00cec9;
+    --text: #e8e8f0;
+    --text-dim: #8888a0;
+    --danger: #ff6b6b;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; line-height: 1.6;
+  }
+  .container { max-width: 800px; width: 100%; }
+  header { text-align: center; margin-bottom: 40px; padding-top: 20px; }
+  .logo { font-size: 42px; margin-bottom: 8px; }
+  h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent-light), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .tagline { color: var(--text-dim); margin-top: 6px; font-size: 1rem; }
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: var(--radius); padding: 4px; margin-bottom: 24px; }
+  .tab { flex: 1; padding: 12px 16px; border: none; background: transparent; color: var(--text-dim); font-size: 0.9rem; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.2s; }
+  .tab:hover { color: var(--text); background: var(--surface2); }
+  .tab.active { background: var(--accent); color: white; }
+  .panel { display: none; animation: fadeIn 0.3s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .upload-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--surface); }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(108,92,231,0.08); }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-zone p { color: var(--text-dim); }
+  .upload-zone .highlight { color: var(--accent-light); font-weight: 600; }
+  #fileInput { display: none; }
+  textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 16px; font-size: 0.95rem; font-family: inherit; resize: vertical; min-height: 160px; transition: border-color 0.2s; }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border: none; border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #5a4bd1; transform: translateY(-1px); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-row { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  .file-info { display: none; align-items: center; gap: 12px; padding: 14px 18px; background: var(--surface); border-radius: var(--radius); margin-bottom: 20px; border: 1px solid var(--border); }
+  .file-info.show { display: flex; }
+  .file-info .icon { font-size: 28px; }
+  .file-info .meta { flex: 1; }
+  .file-info .name { font-weight: 600; }
+  .file-info .size { color: var(--text-dim); font-size: 0.85rem; }
+  .file-info .remove { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.2rem; padding: 4px; }
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-top: 24px; animation: fadeIn 0.4s ease; }
+  .result-card h3 { font-size: 1.1rem; margin-bottom: 16px; color: var(--accent-light); display: flex; align-items: center; gap: 8px; }
+  .result-content { white-space: pre-wrap; font-size: 0.95rem; color: var(--text); }
+  .result-content h2, .result-content h3, .result-content h4 { margin: 16px 0 8px; color: var(--text); }
+  .result-content ul, .result-content ol { padding-left: 20px; margin: 8px 0; }
+  .result-content li { margin: 4px 0; }
+  .result-content table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .result-content th, .result-content td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; font-size: 0.9rem; }
+  .result-content th { background: var(--surface2); color: var(--accent-light); }
+  .result-content code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+  .quiz-container { margin-top: 24px; }
+  .quiz-question { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .quiz-q { font-weight: 600; margin-bottom: 12px; font-size: 1rem; }
+  .quiz-options { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-opt { padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.15s; font-size: 0.9rem; text-align: left; color: var(--text); }
+  .quiz-opt:hover { border-color: var(--accent); }
+  .quiz-opt.selected { border-color: var(--accent); background: rgba(108,92,231,0.2); }
+  .quiz-opt.correct { border-color: var(--green); background: rgba(0,206,201,0.15); }
+  .quiz-opt.wrong { border-color: var(--danger); background: rgba(255,107,107,0.15); }
+  .quiz-feedback { margin-top: 10px; font-size: 0.9rem; font-weight: 600; }
+  .flashcard-deck { display: grid; gap: 16px; margin-top: 24px; }
+  .flashcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; min-height: 120px; }
+  .flashcard:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .flashcard-front, .flashcard-back { padding: 20px; }
+  .flashcard-front { font-weight: 600; font-size: 1.05rem; color: var(--accent-light); border-bottom: 1px solid var(--border); }
+  .flashcard-back { display: none; font-size: 0.95rem; color: var(--text); }
+  .flashcard.flipped .flashcard-back { display: block; }
+  .flashcard.flipped .flashcard-front { border-bottom-color: transparent; }
+  .loading { display: none; text-align: center; padding: 40px; }
+  .loading.show { display: block; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--text-dim); font-size: 0.9rem; }
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 0.9rem; z-index: 1000; animation: slideIn 0.3s ease; display: none; }
+  .toast.error { border-color: var(--danger); }
+  .toast.show { display: block; }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .copy-btn { float: right; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--text); }
+  .explain-input { display: flex; gap: 12px; margin-top: 16px; }
+  .explain-input input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 12px 16px; font-size: 1rem; }
+  .explain-input input:focus { outline: none; border-color: var(--accent); }
+  @media (max-width: 600px) { body { padding: 12px; } h1 { font-size: 1.5rem; } .tabs { flex-direction: column; } .btn { width: 100%; justify-content: center; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">&#x1F4D6;&#x1F9D0;</div>
+    <h1>StudyBuddy</h1>
+    <p class="tagline">Upload your notes or PDF &mdash; get study guides, quizzes & flashcards instantly</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="pdf">&#x1F4C4; PDF / Notes</button>
+    <button class="tab" data-tab="quiz">&#x270D;&#xFE0F; Quizzes</button>
+    <button class="tab" data-tab="flashcards">&#x1F50D; Flashcards</button>
+    <button class="tab" data-tab="explain">&#128161; Explain</button>
+  </div>
+
+  <!-- Panel: PDF/Notes -->
+  <div id="panel-pdf" class="panel active">
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon">&#128196;</div>
+      <p><span class="highlight">Click to upload</span> or drag & drop your PDF</p>
+      <p style="font-size:0.8rem;margin-top:8px;">PDF files only &mdash; text will be extracted automatically</p>
+      <input type="file" id="fileInput" accept=".pdf">
+    </div>
+    <div class="file-info" id="fileInfo">
+      <span class="icon">&#128196;</span>
+      <div class="meta"><div class="name" id="fileName"></div><div class="size" id="fileSize"></div></div>
+      <button class="remove" id="removeFile">&times;</button>
+    </div>
+    <textarea id="notesInput" placeholder="Or paste your study notes here directly..."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnNotes">&#x1F4CA; Generate Study Guide</button>
+      <button class="btn btn-secondary" id="btnQuizFromNotes">&#x270D;&#xFE0F; Generate Quiz</button>
+      <button class="btn btn-secondary" id="btnFlashFromNotes">&#x1F50D; Flashcards</button>
+    </div>
+    <div class="loading" id="loadingNotes"><div class="spinner"></div><div class="loading-text">AI is reading your material...</div></div>
+    <div id="notesResult"></div>
+  </div>
+
+  <!-- Panel: Quizzes -->
+  <div id="panel-quiz" class="panel">
+    <textarea id="quizInput" placeholder="Paste your study notes or material here to generate a quiz..."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnGenQuiz">&#x270D;&#xFE0F; Generate Quiz</button>
+    </div>
+    <div class="loading" id="loadingQuiz"><div class="spinner"></div><div class="loading-text">Generating questions...</div></div>
+    <div class="quiz-container" id="quizResult"></div>
+  </div>
+
+  <!-- Panel: Flashcards -->
+  <div id="panel-flashcards" class="panel">
+    <textarea id="flashInput" placeholder="Paste your notes here to create flashcards..."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnGenFlash">&#x1F50D; Create Flashcards</button>
+    </div>
+    <div class="loading" id="loadingFlash"><div class="spinner"></div><div class="loading-text">Creating flashcards...</div></div>
+    <div class="flashcard-deck" id="flashResult"></div>
+  </div>
+
+  <!-- Panel: Explain -->
+  <div id="panel-explain" class="panel">
+    <p style="color:var(--text-dim);margin-bottom:12px;">Ask StudyBuddy to explain any concept. Add context below for better answers.</p>
+    <div class="explain-input">
+      <input type="text" id="explainTopic" placeholder="What do you want to understand? e.g. 'How does DNA replication work?'">
+      <button class="btn btn-primary" id="btnExplain">&#128161; Explain</button>
+    </div>
+    <textarea id="explainContext" placeholder="Optional: paste relevant notes or textbook excerpt here for more tailored explanations..." style="min-height:100px;margin-top:12px;"></textarea>
+    <div class="loading" id="loadingExplain"><div class="spinner"></div><div class="loading-text">Finding the best explanation...</div></div>
+    <div id="explainResult"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let pdfText = '';
+let uploadedFile = null;
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+function setLoading(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('show', show);
+}
+function toast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show'+(isError ? ' error':'');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+function parseMD(md) {
+  return md.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/^### (.*$)/gm,"<h4>$1</h4>").replace(/^## (.*$)/gm,"<h3>$1</h3>").replace(/^# (.*$)/gm,"<h2>$1</h2>")
+    .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\*(.*?)\*/g,"<em>$1</em>")
+    .replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/^\- (.*$)/gm,"<li>$1</li>").replace(/^\d+\. (.*$)/gm,"<li>$1</li>")
+    .replace(/(<li>.*<\/li>\n?)+/g,m=>"<ul>"+m+"</ul>")
+    .replace(/\n/g,"<br>");
+}
+async function post(path,body) {
+  const r = await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data = await r.json();
+  if(!r.ok) throw new Error(data.error||'Request failed');
+  return data;
+}
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+}
+
+// Upload
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('dragover'); if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => { if(fileInput.files.length) handleFile(fileInput.files[0]); });
+
+async function handleFile(file) {
+  if(!file.name.toLowerCase().endsWith('.pdf')) { toast('Please upload a PDF file',true); return; }
+  uploadedFile = file;
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const r = await fetch('/api/upload-pdf',{method:'POST',body:formData});
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.error);
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = `${data.page_count} pages &middot; ${data.text_length.toLocaleString()} chars`;
+    document.getElementById('fileInfo').classList.add('show');
+    uploadZone.style.display = 'none';
+    toast('PDF loaded!');
+  } catch(e) { toast(e.message,true); }
+}
+document.getElementById('removeFile').addEventListener('click', () => {
+  uploadedFile=null; pdfText=''; fileInput.value='';
+  document.getElementById('fileInfo').classList.remove('show');
+  uploadZone.style.display='';
+});
+
+// Generate Study Notes
+document.getElementById('btnNotes').addEventListener('click', async () => {
+  let text = document.getElementById('notesInput').value.trim();
+  if(!text && !uploadedFile) { toast('Please upload a PDF or paste notes',true); return; }
+  if(uploadedFile && !text) {
+    toast('Reading PDF in browser...');
+    try {
+      const arr = await uploadedFile.arrayBuffer();
+      const lib = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
+      const pdf = await lib.getDocument({data:arr}).promise;
+      let ex = '';
+      for(let i=1;i<=Math.min(pdf.numPages,20);i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        ex += content.items.map(it=>it.str).join(' ')+'\n\n';
+      }
+      text = ex.trim();
+    } catch(e) { toast('Could not extract PDF text, please also paste key sections',false); return; }
+  }
+  if(!text) { toast('No text found in PDF',true); return; }
+  setLoading('loadingNotes',true);
+  document.getElementById('notesResult').innerHTML='';
+  try {
+    const data = await post('/api/study-notes',{text});
+    const div = document.createElement('div');
+    div.className = 'result-card';
+    div.innerHTML = `<button class="copy-btn" onclick="copyResult(this)">Copy</button><h3>&#x1F4CA; Your Study Guide</h3><div class="result-content">${parseMD(data.notes)}</div>`;
+    document.getElementById('notesResult').appendChild(div);
+  } catch(e) { toast(e.message,true); }
+  finally { setLoading('loadingNotes',false); }
+});
+
+// From notes buttons
+document.getElementById('btnQuizFromNotes').addEventListener('click', () => {
+  switchTab('quiz');
+  const text = document.getElementById('notesInput').value.trim();
+  if(text) document.getElementById('quizInput').value = text;
+});
+document.getElementById('btnFlashFromNotes').addEventListener('click', () => {
+  switchTab('flashcards');
+  const text = document.getElementById('notesInput').value.trim();
+  if(text) document.getElementById('flashInput').value = text;
+});
+
+// Quiz
+document.getElementById('btnGenQuiz').addEventListener('click', async () => {
+  const text = document.getElementById('quizInput').value.trim();
+  if(!text) { toast('Paste some study notes first',true); return; }
+  setLoading('loadingQuiz',true);
+  document.getElementById('quizResult').innerHTML='';
+  try {
+    const data = await post('/api/generate-quizzes',{text,count:8});
+    renderQuizzes(data.quizzes);
+  } catch(e) { toast(e.message,true); }
+  finally { setLoading('loadingQuiz',false); }
+});
+function renderQuizzes(quizzes) {
+  const c = document.getElementById('quizResult');
+  if(!quizzes.length) { toast('Could not generate quizzes',true); return; }
+  quizzes.forEach((q,qi)=>{
+    const div = document.createElement('div'); div.className='quiz-question';
+    const opts = q.options||[];
+    div.innerHTML = `<div class="quiz-q">${qi+1}. ${q.question}</div><div class="quiz-options">${opts.map((o,oi)=>`<button class="quiz-opt" data-q="${qi}" data-o="${oi}">${o}</button>`).join("")}</div><div class="quiz-feedback" id="feedback-${qi}"></div>`;
+    c.appendChild(div);
+  });
+  c.querySelectorAll('.quiz-opt').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const qi=btn.dataset.q, oi=parseInt(btn.dataset.o);
+      const q=quizzes[qi], fb=document.getElementById('feedback-'+qi);
+      c.querySelectorAll(`.quiz-opt[data-q="${qi}"]`).forEach(b=>{
+        b.disabled=true;
+        const bi=parseInt(b.dataset.o);
+        if(bi===q.correct) b.classList.add('correct');
+        else if(bi===oi) b.classList.add('wrong');
+      });
+      fb.textContent = oi===q.correct ? "&#10004; Correct!" : "&#10060; Wrong &mdash; answer was: "+(q.options[q.correct]||'');
+      fb.style.color = oi===q.correct ? 'var(--green)' : 'var(--danger)';
+    });
+  });
+}
+
+// Flashcards
+document.getElementById('btnGenFlash').addEventListener('click', async () => {
+  const text = document.getElementById('flashInput').value.trim();
+  if(!text) { toast('Paste some study notes first',true); return; }
+  setLoading('loadingFlash',true);
+  document.getElementById('flashResult').innerHTML='';
+  try {
+    const data = await post('/api/memorize',{text});
+    if(!data.flashcards.length) { toast('No flashcards generated',true); return; }
+    const deck = document.createElement('div');
+    deck.innerHTML = `<p style="text-align:center;color:var(--text-dim);margin-bottom:12px;">&#128187; ${data.flashcards.length} cards &mdash; click to flip</p>`;
+    data.flashcards.forEach(card=>{
+      const fc=document.createElement('div'); fc.className='flashcard';
+      fc.innerHTML=`<div class="flashcard-front">${card.front}</div><div class="flashcard-back">${card.back}</div>`;
+      fc.addEventListener('click',()=>fc.classList.toggle('flipped'));
+      deck.appendChild(fc);
+    });
+    document.getElementById('flashResult').appendChild(deck);
+  } catch(e) { toast(e.message,true); }
+  finally { setLoading('loadingFlash',false); }
+});
+
+// Explain
+document.getElementById('btnExplain').addEventListener('click', async () => {
+  const topic = document.getElementById('explainTopic').value.trim();
+  if(!topic) { toast('Enter a topic to explain',true); return; }
+  const context = document.getElementById('explainContext').value.trim();
+  setLoading('loadingExplain',true);
+  document.getElementById('explainResult').innerHTML='';
+  try {
+    const data = await post('/api/explain',{topic,context});
+    const div = document.createElement('div');
+    div.className = 'result-card';
+    div.innerHTML = `<button class="copy-btn" onclick="copyResult(this)">Copy</button><h3>&#128161; ${topic}</h3><div class="result-content">${parseMD(data.explanation)}</div>`;
+    document.getElementById('explainResult').appendChild(div);
+  } catch(e) { toast(e.message,true); }
+  finally { setLoading('loadingExplain',false); }
+});
+
+function copyResult(btn) {
+  const el = btn.closest('.result-card').querySelector('.result-content');
+  navigator.clipboard.writeText(el.innerText).then(()=>toast('Copied!'));
+}
+</script>
+</body>
+</html>
